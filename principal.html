@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARS SURVIVAL | Explorador marciano</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c12;--panel:#101720;--panel2:#151f2b;--line:#263443;--muted:#8493a5;--text:#edf3f8;--orange:#f07848;--cyan:#65c7d9;--green:#79c99a;--red:#f16f68}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;overflow:hidden}
+header{height:66px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;
+    justify-content:space-between;
+    padding:0 22px;background:#0b1119;position:relative;
+    z-index:500}
+.brand{display:flex;
+    align-items:center;
+    gap:12px}.logo{width:36px;
+        height:36px;
+        border-radius:11px;
+        background:linear-gradient(145deg,#ff9865,#b63e27);
+        display:grid;
+        place-items:center;
+        font-size:20px;
+        box-shadow:0 0 22px #e76c4140}.brand strong{font:700 15px Orbitron;
+            letter-spacing:1.5px}.brand small{display:block;
+                color:var(--muted);
+                font-size:9px;
+                letter-spacing:2px;
+                margin-top:3px}
+.header-right{display:flex;
+    align-items:center;
+    gap:16px;color:var(--muted);
+    font-size:11px}.live{color:var(--green);
+        border:1px solid #315b48;
+        padding:7px 10px;
+        border-radius:20px;
+        letter-spacing:1px;font-weight:700}
+.layout{height:calc(100vh - 66px);
+    display:grid;
+    grid-template-columns:290px minmax(350px,1fr) 300px}
+.sidebar{background:var(--panel);
+    padding:18px 16px;
+    overflow:auto;border-right:1px solid var(--line)}.right{border-left:1px solid var(--line);
+        border-right:0}
+.section-title{font-size:10px;
+    color:#9cabbc;
+    letter-spacing:1.6px;
+    font-weight:800;
+    margin:3px 0 13px}.sub{font-size:11px;color:var(--muted);
+        line-height:1.55}
+.search{width:100%;
+    background:#0b121b;
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:11px;
+    color:var(--text);
+    outline:none;
+    margin:8px 0 17px}
+.layer{display:flex;align-items:center;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid #202c39;
+    font-size:12px}
+.layer span{display:flex;
+    align-items:center;
+    gap:9px}
+.layer input{accent-color:var(--orange);width:15px;
+    height:15px}.dot{width:8px;height:8px;
+        border-radius:50%;
+        display:inline-block}
+.place{padding:11px;
+    border:1px solid var(--line);
+    border-radius:10px;margin:8px 0;
+    background:#111b26;cursor:pointer;
+    transition:.2s}
+.place:hover{border-color:var(--orange);
+        transform:translateY(-1px)}
+.place b{font-size:12px}
+.place small{display:block;
+    color:var(--muted);
+    font-size:10px;
+    margin-top:4px}
+#map{height:100%;
+    width:100%;
+    background:#1b2026}
+    .map-wrap{position:relative;
+        min-width:0}
+    .map-top{position:absolute;
+        z-index:400;
+        top:16px;
+        left:16px;
+        right:16px;
+        display:flex;
+        justify-content:space-between;
+        pointer-events:none}
+    .map-chip{background:#0c141ddd;
+        border:1px solid #344352;
+        border-radius:9px;
+        padding:9px 12px;
+        font-size:10px;
+        letter-spacing:.7px;
+        backdrop-filter:blur(8px);pointer-events:auto}
+    .map-chip b{color:var(--orange)}
+.map-bottom{position:absolute;
+    z-index:400;
+    bottom:16px;
+    left:16px;
+    background:#0c141ddd;
+    border:1px solid #344352;
+    border-radius:9px;
+    padding:9px 12px;
+    color:#aab7c5;
+    font-size:10px;
+    max-width:340px}
+.card{background:#111b26;
+    border:1px solid var(--line);
+    border-radius:11px;padding:13px;
+    margin:12px 0}
+    .card h3{font-size:12px;
+        margin:0 0 10px}
+    .field-label{display:block;
+        color:var(--muted);
+        font-size:10px;
+        margin:9px 0 5px}
+    .field{width:100%;
+        background:#0a121b;
+        border:1px solid #2a3948;
+        color:var(--text);padding:9px;
+        border-radius:7px;font:inherit;
+        font-size:11px}
+    .btn{width:100%;
+        border:0;
+        border-radius:8px;
+        padding:10px;
+        margin-top:9px;
+        background:linear-gradient(100deg,#f18a58,#d85b3c);
+        color:white;
+        font-weight:800;
+        font-size:11px;
+        cursor:pointer}
+    .btn.secondary{background:#202d3a;
+        border:1px solid #344454;
+        color:#dce6ef}
+    .metric{display:flex;
+        justify-content:space-between;
+        padding:8px 0;
+        border-bottom:1px solid #24313e;
+        font-size:11px}
+    .metric span{color:var(--muted)}
+    .metric b{font-variant-numeric:tabular-nums}
+    .risk{padding:10px;
+        border-radius:8px;
+        background:#2a211b;
+        color:#f4b27d;
+        font-size:10px;
+        line-height:1.5;
+        margin-top:10px}
+        .source{font-size:10px;
+            color:var(--muted);
+            line-height:1.6}
+        .source a{color:var(--cyan);
+                text-decoration:none}
+        .source a:hover{text-decoration:underline}
+.leaflet-container{font-family:Inter,Arial}
+.leaflet-control-zoom a{background:#101a25!important;
+    color:#fff!important;
+    border-color:#334454!important}
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip{background:#101a25;
+        color:#edf3f8}
+        .leaflet-popup-content{font:11px/1.6 Inter}
+        .leaflet-popup-content b{color:#ff9b6b}
+@media(max-width:1000px){body{overflow:auto}
+.layout{height:auto;
+    min-height:calc(100vh - 66px);
+    grid-template-columns:240px 1fr}
+    .right{grid-column:1/-1;border-left:0;
+        border-top:1px solid var(--line)}
+        .map-wrap{height:65vh;
+            min-height:430px}}
+@media(max-width:650px){header{padding:0 12px}
+.header-right 
+.status{display:none}
+.layout{display:flex;
+    flex-direction:column}
+.sidebar{border-right:0;
+    border-bottom:1px solid var(--line)}
+.map-wrap{height:60vh;
+    min-height:380px}
+.right{border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">✦</div><div><strong>SYSCOREE</strong><small>PLANIFICADOR DE EXPLORACIÓN</small></div></div>
+ <div class="header-right"><span class="status">SOL 001 · SECTOR JEZERO</span><span class="live">● SISTEMA EN LÍNEA</span></div>
+</header>
+<div class="layout">
+ <aside class="sidebar">
+  <div class="section-title">01 / EXPLORADOR DE MAPA</div>
+  <div class="sub">Busca una región o selecciona un punto de interés para centrar el mapa.</div>
+  <input class="search" id="search" placeholder="Buscar: Jezero, Gale, Olympus..." />
+  <div class="section-title">CAPAS CARTOGRÁFICAS</div>
+  <div class="layer"><span><i class="dot" style="background:#d18b55"></i>Relieve global MOLA</span><input type="checkbox" id="relief" checked></div>
+  <div class="layer"><span><i class="dot" style="background:#e7c56a"></i>Terreno / elevación</span><input type="checkbox" id="terrain"></div>
+  <div class="layer"><span><i class="dot" style="background:#66b8d0"></i>Temperatura (referencia)</span><input type="checkbox" id="temp"></div>
+  <div class="layer"><span><i class="dot" style="background:#7ccba0"></i>Agua / hielo (indicios)</span><input type="checkbox" id="ice"></div>
+  <div class="layer"><span><i class="dot" style="background:#d68a68"></i>Misiones y aterrizajes</span><input type="checkbox" id="missions" checked></div>
+  <p class="sub">Las capas de referencia se muestran como ayudas visuales. No sustituyen productos científicos rasterizados ni mediciones en tiempo real.</p>
+  <div class="section-title" style="margin-top:22px">02 / PUNTOS DE INTERÉS</div>
+  <div class="place" data-name="Jezero" data-lat="18.38" data-lon="77.58"><b>◉ Cráter Jezero</b><small>Perseverance · antiguo delta fluvial</small></div>
+  <div class="place" data-name="Gale" data-lat="-5.4" data-lon="137.8"><b>◉ Cráter Gale</b><small>Curiosity · Monte Sharp</small></div>
+  <div class="place" data-name="Olympus Mons" data-lat="18.65" data-lon="-133.8"><b>◉ Olympus Mons</b><small>Gran volcán marciano</small></div>
+  <div class="place" data-name="Valles Marineris" data-lat="-13.9" data-lon="-59.2"><b>◉ Valles Marineris</b><small>Sistema de cañones</small></div>
+  <div class="place" data-name="Elysium Planitia" data-lat="4.5" data-lon="135.9"><b>◉ Elysium Planitia</b><small>Zona de aterrizaje de InSight</small></div>
+ </aside>
+ <main class="map-wrap">
+  <div id="map"></div>
+  <div class="map-top"><div class="map-chip">PLANETA <b>MARTE</b> &nbsp;|&nbsp; PROYECCIÓN EQUIRECTANGULAR</div><div class="map-chip">COORDENADAS <b id="coords">18.38° N, 77.58° E</b></div></div>
+  <div class="map-bottom">BASE CARTOGRÁFICA: NASA / JPL – Mars Trek · MOLA / Viking. Haz clic en el mapa para consultar coordenadas.</div>
+ </main>
+ <aside class="sidebar right">
+  <div class="section-title">03 / PLANIFICADOR DE RUTA</div>
+  <div class="card">
+   <h3>Definir recorrido A → B</h3>
+   <label class="field-label">PUNTO DE ORIGEN</label>
+   <select class="field" id="origin"><option value="18.38,77.58">Cráter Jezero</option><option value="-5.4,137.8">Cráter Gale</option><option value="4.5,135.9">Elysium Planitia</option><option value="18.65,-133.8">Olympus Mons</option></select>
+   <label class="field-label">PUNTO DE DESTINO</label>
+   <select class="field" id="destination"><option value="-5.4,137.8">Cráter Gale</option><option value="18.38,77.58">Cráter Jezero</option><option value="4.5,135.9">Elysium Planitia</option><option value="-13.9,-59.2">Valles Marineris</option></select>
+   <button class="btn" id="routeBtn">CALCULAR RUTA</button>
+   <button class="btn secondary" id="clearBtn">LIMPIAR RUTA</button>
+  </div>
+  <div class="section-title">04 / ANÁLISIS DEL RECORRIDO</div>
+  <div class="card">
+   <div class="metric"><span>Distancia en línea recta</span><b id="distance">—</b></div>
+   <div class="metric"><span>Pendiente</span><b id="slope">Sin DEM</b></div>
+   <div class="metric"><span>Evaluación</span><b id="risk">Pendiente</b></div>
+   <div class="risk" id="riskText">Calcula una ruta para obtener una estimación geométrica. La pendiente real requiere consultar un modelo digital de elevación (DEM) en los puntos del trayecto.</div>
+  </div>
+  <div class="section-title">05 / FICHA CIENTÍFICA</div>
+  <div class="card" id="info">
+   <h3 id="infoTitle">Cráter Jezero</h3>
+   <p class="sub" id="infoText">Perseverance explora esta región, que conserva evidencias geológicas de un antiguo ambiente con agua.</p>
+   <div class="metric"><span>Coordenadas</span><b id="infoCoords">18.38° N, 77.58° E</b></div>
+   <div class="metric"><span>Misión relacionada</span><b id="infoMission">Perseverance</b></div>
+   <p class="source" id="infoSource">Fuente: NASA Mars 2020. <a href="https://mars.nasa.gov/mars2020/" target="_blank">Consultar misión ↗</a></p>
+  </div>
+  <div class="section-title">METADATOS Y FUENTES</div>
+  <p class="source">Mapa: NASA/JPL Mars Trek. Relieve global: Mars Global Surveyor – MOLA. Imágenes base: Viking MDIM. Las condiciones de temperatura, hielo y riesgo no se presentan como datos en vivo.</p>
+  <p class="source"><a href="https://trek.nasa.gov/mars/" target="_blank">NASA Mars Trek ↗</a><br><a href="https://pds.nasa.gov/" target="_blank">Planetary Data System ↗</a><br><a href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars" target="_blank">Catálogo de capas WMTS ↗</a></p>
+ </aside>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map',{crs:L.CRS.EPSG4326,center:[18.38,77.58],zoom:2,minZoom:1,maxZoom:7,worldCopyJump:false});
+const nasaTiles='https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg';
+const base=L.tileLayer(nasaTiles,{minZoom:0,maxZoom:7,tileSize:256,noWrap:true,attribution:'NASA / JPL · Mars Trek · Viking MDIM'}).addTo(map);
+base.on('tileerror',()=>{document.querySelector('.map-bottom').textContent='No se pudo cargar una tesela NASA. Comprueba tu conexión; consulta NASA Mars Trek desde el enlace de fuentes.'});
+const reliefUrl='https://trek.nasa.gov/tiles/Mars/EQ/Mars_MGS_MOLA_ClrShade_merge_global_463m/1.0.0/default/default028mm/{z}/{y}/{x}.png';
+const relief=L.tileLayer(reliefUrl,{opacity:.78,minZoom:0,maxZoom:7,noWrap:true,attribution:'NASA/JPL MOLA'}).addTo(map);
+let routeLine=null, markers=[];
+const places=[
+ {name:'Cráter Jezero',lat:18.38,lon:77.58,mission:'Perseverance',desc:'Antiguo cráter que albergó un lago y un delta fluvial. Perseverance estudia sus rocas y busca señales de ambientes antiguos habitables.',source:'NASA Mars 2020'},
+ {name:'Cráter Gale',lat:-5.4,lon:137.8,mission:'Curiosity',desc:'Cráter explorado por Curiosity. El rover estudia capas sedimentarias del Monte Sharp y la historia ambiental del planeta.',source:'NASA Curiosity'},
+ {name:'Olympus Mons',lat:18.65,lon:-133.8,mission:'MOLA / MGS',desc:'Uno de los volcanes más grandes del sistema solar. Su relieve elevado es importante para estudios geológicos.',source:'NASA MOLA'},
+ {name:'Valles Marineris',lat:-13.9,lon:-59.2,mission:'Mariner 9 / MRO',desc:'Sistema de cañones de enorme extensión. El terreno presenta cambios topográficos marcados.',source:'NASA Mars Reconnaissance Orbiter'},
+ {name:'Elysium Planitia',lat:4.5,lon:135.9,mission:'InSight',desc:'Región donde aterrizó la misión InSight para estudiar el interior y la actividad sísmica de Marte.',source:'NASA InSight'}
+];
+const missionLayer=L.layerGroup().addTo(map);
+places.forEach(p=>{
+ const m=L.circleMarker([p.lat,p.lon],{radius:7,color:'#ffb17f',weight:2,fillColor:'#ef7047',fillOpacity:.95}).addTo(missionLayer);
+ m.bindPopup(`<b>${p.name}</b><br>${p.desc}<br><small>Fuente: ${p.source}</small>`);
+ m.on('click',()=>showInfo(p));
+});
+function showInfo(p){document.getElementById('infoTitle').textContent=p.name;document.getElementById('infoText').textContent=p.desc;document.getElementById('infoCoords').textContent=`${Math.abs(p.lat).toFixed(2)}° ${p.lat>=0?'N':'S'}, ${Math.abs(p.lon).toFixed(2)}° ${p.lon>=0?'E':'W'}`;document.getElementById('infoMission').textContent=p.mission;document.getElementById('infoSource').innerHTML=`Fuente: ${p.source}. <a href="https://trek.nasa.gov/mars/" target="_blank">Consultar NASA Trek ↗</a>`}
+document.querySelectorAll('.place').forEach(el=>el.addEventListener('click',()=>{const p=places.find(x=>x.name.toLowerCase().includes(el.dataset.name.toLowerCase()));map.setView([+el.dataset.lat,+el.dataset.lon],4);if(p)showInfo(p)}));
+document.getElementById('relief').addEventListener('change',e=>{e.target.checked?relief.addTo(map):map.removeLayer(relief)});
+document.getElementById('missions').addEventListener('change',e=>{e.target.checked?missionLayer.addTo(map):map.removeLayer(missionLayer)});
+['terrain','temp','ice'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{if(e.target.checked)alert('Esta capa es una referencia de interfaz. Para mostrar datos científicos medidos, integraremos el producto correspondiente del catálogo NASA Mars Trek y sus metadatos.')}));
+map.on('mousemove',e=>{document.getElementById('coords').textContent=`${Math.abs(e.latlng.lat).toFixed(2)}° ${e.latlng.lat>=0?'N':'S'}, ${Math.abs(e.latlng.lng).toFixed(2)}° ${e.latlng.lng>=0?'E':'W'}`});
+map.on('click',e=>{const p={name:'Punto seleccionado',lat:e.latlng.lat,lon:e.latlng.lng,mission:'Sin misión asignada',desc:'Ubicación seleccionada manualmente. Consulta los productos de NASA para conocer las características científicas de esta zona.',source:'Coordenadas del mapa'};showInfo(p)});
+function haversine(a,b){const R=3389.5,toRad=x=>x*Math.PI/180,dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);const h=Math.sin(dLat/2)**2+Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+document.getElementById('routeBtn').addEventListener('click',()=>{const a=document.getElementById('origin').value.split(',').map(Number),b=document.getElementById('destination').value.split(',').map(Number);if(routeLine)map.removeLayer(routeLine);markers.forEach(m=>map.removeLayer(m));markers=[];routeLine=L.polyline([a,b],{color:'#ff8a59',weight:4,dashArray:'9 8'}).addTo(map);markers=[L.circleMarker(a,{radius:7,color:'#fff',fillColor:'#55c98b',fillOpacity:1}).addTo(map),L.circleMarker(b,{radius:7,color:'#fff',fillColor:'#ef7047',fillOpacity:1}).addTo(map)];map.fitBounds(routeLine.getBounds().pad(.25));const d=haversine(a,b);document.getElementById('distance').textContent=d.toFixed(1)+' km';document.getElementById('slope').textContent='Requiere DEM';document.getElementById('risk').textContent='No verificado';document.getElementById('riskText').textContent='Distancia geodésica aproximada en línea recta sobre una esfera de radio 3,389.5 km. No es una ruta transitable. La pendiente, obstáculos y seguridad no se pueden determinar sin un DEM y análisis local.'});
+document.getElementById('clearBtn').addEventListener('click',()=>{if(routeLine)map.removeLayer(routeLine);routeLine=null;markers.forEach(m=>map.removeLayer(m));markers=[];document.getElementById('distance').textContent='—';document.getElementById('slope').textContent='Sin DEM';document.getElementById('risk').textContent='Pendiente';document.getElementById('riskText').textContent='Calcula una ruta para obtener una estimación geométrica. La pendiente real requiere consultar un modelo digital de elevación (DEM) en los puntos del trayecto.'});
+document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.toLowerCase();const p=places.find(x=>x.name.toLowerCase().includes(q));if(p){map.setView([p.lat,p.lon],4);showInfo(p)}else alert('Lugar no encontrado. Prueba Jezero, Gale, Olympus Mons, Valles Marineris o Elysium Planitia.')}});
+</script>
+</body>
+</html>
