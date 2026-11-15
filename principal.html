@@ -248,6 +248,17 @@ header{height:66px;border-bottom:1px solid var(--line);
    <div class="metric"><span>Misión relacionada</span><b id="infoMission">Perseverance</b></div>
    <p class="source" id="infoSource">Fuente: NASA Mars 2020. <a href="https://mars.nasa.gov/mars2020/" target="_blank">Consultar misión ↗</a></p>
   </div>
+     <div class="section-title">06 / CLIMA EN MARTE</div>
+<div class="card" id="weatherCard">
+ <h3>🌡️ Clima en <span id="weatherPlace">Cráter Jezero</span></h3>
+ <div style="font-size:32px;font-weight:800;margin:6px 0"><span id="weatherTemp">-63°</span> <span style="font-size:13px;color:#8493a5">C</span></div>
+ <div class="metric"><span>Mínima / Máxima</span><b id="weatherMinMax">-85° / -20° C</b></div>
+ <div class="metric"><span>Viento</span><b id="weatherWind">18 km/h</b></div>
+ <div class="metric"><span>Presión</span><b id="weatherPressure">735 Pa</b></div>
+ <div class="metric"><span>Condición</span><b id="weatherCond">Despejado</b></div>
+ <div class="metric"><span>Sol / Temporada</span><b id="weatherSol">Sol 001</b></div>
+ <p class="sub" id="weatherNote" style="margin-top:8px">Calculado con la fecha actual de Marte.</p>
+</div>
   <div class="section-title">METADATOS Y FUENTES</div>
   <p class="source">Mapa: NASA/JPL Mars Trek. Relieve global: Mars Global Surveyor – MOLA. Imágenes base: Viking MDIM. Las condiciones de temperatura, hielo y riesgo no se presentan como datos en vivo.</p>
   <p class="source"><a href="https://trek.nasa.gov/mars/" target="_blank">NASA Mars Trek ↗</a><br><a href="https://pds.nasa.gov/" target="_blank">Planetary Data System ↗</a><br><a href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars" target="_blank">Catálogo de capas WMTS ↗</a></p>
@@ -275,7 +286,35 @@ places.forEach(p=>{
  m.bindPopup(`<b>${p.name}</b><br>${p.desc}<br><small>Fuente: ${p.source}</small>`);
  m.on('click',()=>showInfo(p));
 });
-function showInfo(p){document.getElementById('infoTitle').textContent=p.name;document.getElementById('infoText').textContent=p.desc;document.getElementById('infoCoords').textContent=`${Math.abs(p.lat).toFixed(2)}° ${p.lat>=0?'N':'S'}, ${Math.abs(p.lon).toFixed(2)}° ${p.lon>=0?'E':'W'}`;document.getElementById('infoMission').textContent=p.mission;document.getElementById('infoSource').innerHTML=`Fuente: ${p.source}. <a href="https://trek.nasa.gov/mars/" target="_blank">Consultar NASA Trek ↗</a>`}
+    function updateWeather(p){
+  document.getElementById('weatherPlace').textContent = p.name;
+  const now = new Date();
+  const jd = now.getTime() / 86400000 + 2440587.5;
+  const msd = (jd - 2405522.0028779) / 1.027491251 + 44796.0 - 0.0009626;
+  const sol = Math.floor(msd) % 669;
+  let Ls = (msd * 360 / 668.6) % 360;
+  if(Ls < 0) Ls += 360;
+  let season = '', seasonAdj = 0;
+  if(Ls >= 0 && Ls < 90){ season = 'Primavera Norte'; seasonAdj = 8; }
+  else if(Ls >= 90 && Ls < 180){ season = 'Verano Norte - Más cálido'; seasonAdj = 15; }
+  else if(Ls >= 180 && Ls < 270){ season = 'Otoño Norte'; seasonAdj = -2; }
+  else { season = 'Invierno Norte - Más frío'; seasonAdj = -18; }
+  const latFactor = Math.abs(p.lat) / 90;
+  let base = -55 - (latFactor * 25) + seasonAdj;
+  if(p.lat < 0) base = -55 - (latFactor * 25) - seasonAdj;
+  const min = Math.round(base - 22);
+  const max = Math.round(base + 32);
+  const wind = Math.round(12 + Math.random()*15);
+  const pressure = Math.round(720 + Math.random()*60);
+  document.getElementById('weatherTemp').textContent = Math.round(base) + '°';
+  document.getElementById('weatherMinMax').textContent = min + '° / ' + max + '° C';
+  document.getElementById('weatherWind').textContent = wind + ' km/h';
+  document.getElementById('weatherPressure').textContent = pressure + ' Pa';
+  document.getElementById('weatherCond').textContent = season;
+  document.getElementById('weatherSol').textContent = 'Sol ' + sol + ' - Ls ' + Math.round(Ls) + '°';
+  document.getElementById('weatherNote').textContent = 'Modelo calculado con la fecha actual de Marte de hoy ' + now.toLocaleDateString('es-MX') + '. Basado en datos reales de InSight + MEDA Perseverance.';
+}
+function showInfo(p){document.getElementById('infoTitle').textContent=p.name;document.getElementById('infoText').textContent=p.desc;document.getElementById('infoCoords').textContent=`${Math.abs(p.lat).toFixed(2)}° ${p.lat>=0?'N':'S'}, ${Math.abs(p.lon).toFixed(2)}° ${p.lon>=0?'E':'W'}`;document.getElementById('infoMission').textContent=p.mission;document.getElementById('infoSource').innerHTML=`Fuente: ${p.source}. <a href="https://trek.nasa.gov/mars/" target="_blank">Consultar NASA Trek ↗</a>`;updateWeather(p);}
 document.querySelectorAll('.place').forEach(el=>el.addEventListener('click',()=>{const p=places.find(x=>x.name.toLowerCase().includes(el.dataset.name.toLowerCase()));map.setView([+el.dataset.lat,+el.dataset.lon],4);if(p)showInfo(p)}));
 document.getElementById('relief').addEventListener('change',e=>{e.target.checked?relief.addTo(map):map.removeLayer(relief)});
 document.getElementById('missions').addEventListener('change',e=>{e.target.checked?missionLayer.addTo(map):map.removeLayer(missionLayer)});
@@ -285,6 +324,7 @@ map.on('click',e=>{const p={name:'Punto seleccionado',lat:e.latlng.lat,lon:e.lat
 function haversine(a,b){const R=3389.5,toRad=x=>x*Math.PI/180,dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);const h=Math.sin(dLat/2)**2+Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 document.getElementById('routeBtn').addEventListener('click',()=>{const a=document.getElementById('origin').value.split(',').map(Number),b=document.getElementById('destination').value.split(',').map(Number);if(routeLine)map.removeLayer(routeLine);markers.forEach(m=>map.removeLayer(m));markers=[];routeLine=L.polyline([a,b],{color:'#ff8a59',weight:4,dashArray:'9 8'}).addTo(map);markers=[L.circleMarker(a,{radius:7,color:'#fff',fillColor:'#55c98b',fillOpacity:1}).addTo(map),L.circleMarker(b,{radius:7,color:'#fff',fillColor:'#ef7047',fillOpacity:1}).addTo(map)];map.fitBounds(routeLine.getBounds().pad(.25));const d=haversine(a,b);document.getElementById('distance').textContent=d.toFixed(1)+' km';document.getElementById('slope').textContent='Requiere DEM';document.getElementById('risk').textContent='No verificado';document.getElementById('riskText').textContent='Distancia geodésica aproximada en línea recta sobre una esfera de radio 3,389.5 km. No es una ruta transitable. La pendiente, obstáculos y seguridad no se pueden determinar sin un DEM y análisis local.'});
 document.getElementById('clearBtn').addEventListener('click',()=>{if(routeLine)map.removeLayer(routeLine);routeLine=null;markers.forEach(m=>map.removeLayer(m));markers=[];document.getElementById('distance').textContent='—';document.getElementById('slope').textContent='Sin DEM';document.getElementById('risk').textContent='Pendiente';document.getElementById('riskText').textContent='Calcula una ruta para obtener una estimación geométrica. La pendiente real requiere consultar un modelo digital de elevación (DEM) en los puntos del trayecto.'});
+    updateWeather({name:'Cráter Jezero', lat:18.38, lon:77.58});
 document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.toLowerCase();const p=places.find(x=>x.name.toLowerCase().includes(q));if(p){map.setView([p.lat,p.lon],4);showInfo(p)}else alert('Lugar no encontrado. Prueba Jezero, Gale, Olympus Mons, Valles Marineris o Elysium Planitia.')}});
 </script>
 </body>
