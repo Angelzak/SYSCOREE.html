@@ -261,6 +261,14 @@ header{height:66px;border-bottom:1px solid var(--line);
  <div class="metric"><span>Sol / Temporada</span><b id="weatherSol">Sol 001</b></div>
  <p class="sub" id="weatherNote" style="margin-top:8px">Calculado con la fecha actual de Marte.</p>
 </div>
+<div class="section-title">07 / CLASIFICACIÓN DE TERRENOS</div>
+<div class="card">
+ <h3>Tipos de terreno</h3>
+ <div id="s07List"></div>
+ <button class="btn" id="s07All">SELECCIONAR TODOS</button>
+ <button class="btn secondary" id="s07None">LIMPIAR</button>
+ <p class="sub" id="s07Note" style="margin-top:8px">Selecciona uno o varios tipos para pintarlos en el mapa.</p>
+</div>
   <div class="section-title">METADATOS Y FUENTES</div>
   <p class="source">Mapa: NASA/JPL Mars Trek. Relieve global: Mars Global Surveyor – MOLA. Imágenes base: Viking MDIM. Las condiciones de temperatura, hielo y riesgo no se presentan como datos en vivo.</p>
   <p class="source"><a href="https://trek.nasa.gov/mars/" target="_blank">NASA Mars Trek ↗</a><br><a href="https://pds.nasa.gov/" target="_blank">Planetary Data System ↗</a><br><a href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars" target="_blank">Catálogo de capas WMTS ↗</a></p>
@@ -269,6 +277,139 @@ header{height:66px;border-bottom:1px solid var(--line);
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const map=L.map('map',{crs:L.CRS.EPSG4326,center:[18.38,77.58],zoom:2,minZoom:1,maxZoom:7,worldCopyJump:false});
+(function(){
+  const listEl=document.getElementById('s07List');
+  const noteEl=document.getElementById('s07Note');
+  if(!listEl || !noteEl || typeof L==='undefined' || typeof map==='undefined'){
+    console.warn('Sección 07: falta #s07List, #s07Note, Leaflet o el mapa.');
+    return;
+  }
+
+  function ellipse(lat,lon,rLat,rLon,rot,n){
+    rot=rot||0; n=n||48;
+    const pts=[],c=Math.cos(rot*Math.PI/180),s=Math.sin(rot*Math.PI/180);
+    for(let i=0;i<n;i++){
+      const a=2*Math.PI*i/n,x=rLon*Math.cos(a),y=rLat*Math.sin(a);
+      pts.push([lat+x*s+y*c, lon+x*c-y*s]);
+    }
+    return pts;
+  }
+  const ell=(name,lat,lon,rLat,rLon,rot)=>({name,pts:ellipse(lat,lon,rLat,(rLon===undefined?rLat:rLon),rot)});
+  const rect=(name,s,w,n,e)=>({name,pts:[[s,w],[s,e],[n,e],[n,w]]});
+  const types=[
+   {id:'llanuras',name:'Llanuras',color:'#f2d95c',top:false,shapes:[
+    rect('Vastitas Borealis',65,-180,78,180),
+    ell('Utopia Planitia',46,118,12,28),
+    ell('Acidalia Planitia',46,-30,14,30),
+    ell('Arcadia Planitia',47,-168,8,22),
+    ell('Amazonis Planitia',25,-160,10,22),
+    ell('Chryse Planitia',28,-40,10,16),
+    ell('Elysium Planitia',4,152,8,20),
+    ell('Hesperia Planum',-22,111,10,18),
+    ell('Lunae Planum',10,-66,12,8),
+    ell('Solis Planum',-26,-90,10,12)
+   ]},
+   {id:'crateres',name:'Cráteres de impacto',color:'#00e5ff',top:true,shapes:[
+    ell('Cráter Jezero',18.38,77.58,1.2),
+    ell('Cráter Gale',-5.4,137.8,2.6),
+    ell('Cráter Gusev',-14.5,175.4,1.4),
+    ell('Cráter Huygens',-13.8,55.6,4),
+    ell('Cráter Schiaparelli',-2.7,16.8,3.9),
+    ell('Cráter Lyot',50.5,29.3,2),
+    ell('Cráter Korolev',73,165,1.2),
+    ell('Cráter Holden',-26.4,-34,2.6),
+    ell('Cráter Eberswalde',-24,-33.5,1.2),
+    ell('Cráter Endeavour',-2.3,-5.2,0.9)
+   ]},
+   {id:'cuencas',name:'Cuencas de impacto',color:'#b36bff',top:false,shapes:[
+    ell('Hellas Planitia',-42,70,19.5),
+    ell('Argyre Planitia',-50,-43,14),
+    ell('Isidis Planitia',13.4,87,12.5)
+   ]},
+   {id:'volcanes',name:'Volcanes',color:'#ff3b3b',top:true,shapes:[
+    ell('Olympus Mons',18.65,-133.8,5),
+    ell('Arsia Mons',-8.35,-120.1,3.5),
+    ell('Pavonis Mons',0.8,-113.4,3.5),
+    ell('Ascraeus Mons',11.8,-104.5,3.8),
+    ell('Alba Mons',40.5,-110.5,8),
+    ell('Elysium Mons',25,147,2.5),
+    ell('Hecates Tholus',32.2,150.2,1.5),
+    ell('Albor Tholus',19,150.3,1.5),
+    ell('Tyrrhena Mons',-22,106,3),
+    ell('Apollinaris Mons',-9.3,174.4,2)
+   ]},
+   {id:'canones',name:'Cañones y valles',color:'#3b82f6',top:true,shapes:[
+    ell('Valles Marineris',-13.5,-70,3.2,28),
+    ell('Noctis Labyrinthus',-7,-100,2.5,4),
+    ell('Echus Chasma',1,-80,2.5,3),
+    ell('Kasei Valles',25,-70,3.5,10,30)
+   ]},
+   {id:'tierras-altas',name:'Tierras altas antiguas',color:'#a3e635',top:false,shapes:[
+    ell('Noachis Terra',-45,15,12,20),
+    ell('Terra Sabaea',5,45,12,18),
+    ell('Arabia Terra',22,5,12,20),
+    ell('Terra Cimmeria',-35,145,10,20),
+    ell('Terra Sirenum',-40,-150,10,18),
+    ell('Tempe Terra',40,-72,8,12),
+    ell('Xanthe Terra',3,-50,6,10)
+   ]},
+   {id:'caos',name:'Terreno caótico',color:'#ff9ff3',top:true,shapes:[
+    ell('Aram Chaos',2.6,-21.5,1.8),
+    ell('Iani Chaos',-2.5,-17,2),
+    ell('Hydraotes Chaos',0,-33,2.5),
+    ell('Aureum Chaos',-4,-27,1.8)
+   ]},
+   {id:'dunas',name:'Campos de dunas',color:'#0f766e',top:true,shapes:[
+    ell('Dunas de Nili Patera',8.9,67.3,2),
+    ell('Dunas del cráter Proctor',-46.3,30.1,2)
+   ]},
+   {id:'casquetes',name:'Casquetes polares',color:'#ffffff',top:false,shapes:[
+    rect('Casquete polar norte',80,-180,90,180),
+    rect('Casquete polar sur',-90,-180,-80,180)
+   ]}
+  ];
+
+  const groups={};
+  types.forEach(t=>{
+    const g=L.layerGroup();
+    t.shapes.forEach(s=>{
+      L.polygon(s.pts,{color:t.color,weight:1.5,fillColor:t.color,fillOpacity:.5})
+        .bindTooltip(s.name+' · '+t.name,{sticky:true})
+        .addTo(g);
+    });
+    groups[t.id]=g;
+    const row=document.createElement('div');
+    row.className='layer';
+    row.innerHTML='<span><i class="dot" style="background:'+t.color+'"></i>'+t.name+
+      ' <small style="color:#8493a5">('+t.shapes.length+')</small></span>'+
+      '<input type="checkbox" data-id="'+t.id+'">';
+    listEl.appendChild(row);
+  });
+
+  function refresh(){
+    let n=0;
+    types.forEach(t=>{
+      const on=listEl.querySelector('input[data-id="'+t.id+'"]').checked;
+      const g=groups[t.id];
+      if(on && !map.hasLayer(g)) g.addTo(map);
+      if(!on && map.hasLayer(g)) map.removeLayer(g);
+      if(on) n+=t.shapes.length;
+    });
+    types.filter(t=>t.top && map.hasLayer(groups[t.id]))
+      .forEach(t=>groups[t.id].eachLayer(l=>l.bringToFront()));
+    noteEl.textContent=n?(n+' zonas pintadas en el mapa.'):'Selecciona uno o varios tipos para pintarlos en el mapa.';
+  }
+  function setAll(on){
+    listEl.querySelectorAll('input').forEach(c=>{c.checked=on;});
+    refresh();
+  }
+
+  listEl.addEventListener('change',refresh);
+  const btnAll=document.getElementById('s07All');
+  const btnNone=document.getElementById('s07None');
+  if(btnAll) btnAll.addEventListener('click',()=>setAll(true));
+  if(btnNone) btnNone.addEventListener('click',()=>setAll(false));
+})();
 const nasaTiles='https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg';
 const base=L.tileLayer(nasaTiles,{minZoom:0,maxZoom:7,tileSize:256,noWrap:true,attribution:'NASA / JPL · Mars Trek · Viking MDIM'}).addTo(map);
 base.on('tileerror',()=>{document.querySelector('.map-bottom').textContent='No se pudo cargar una tesela NASA. Comprueba tu conexión; consulta NASA Mars Trek desde el enlace de fuentes.'});
