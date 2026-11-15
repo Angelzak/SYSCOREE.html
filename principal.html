@@ -38,7 +38,20 @@ header{height:66px;border-bottom:1px solid var(--line);
         padding:7px 10px;
         border-radius:20px;
         letter-spacing:1px;font-weight:700}
-.layout{height:calc(100vh - 66px);
+.btn-inicio{display:inline-block;
+    text-decoration:none;
+    background:linear-gradient(100deg,#f18a58,#d85b3c);
+    color:#fff;
+    padding:8px 14px;
+    border-radius:8px;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:1.2px;
+    transition:.2s;
+    box-shadow:0 0 14px #f0784840}
+.btn-inicio:hover{transform:scale(1.05);
+    box-shadow:0 0 22px #f0784880}
+    .layout{height:calc(100vh - 66px);
     display:grid;
     grid-template-columns:290px minmax(350px,1fr) 300px}
 .sidebar{background:var(--panel);
@@ -256,7 +269,7 @@ header{height:66px;border-bottom:1px solid var(--line);
 <body>
 <header>
  <div class="brand"><div class="logo">✦</div><div><strong>SYSCOREE</strong><small>PLANIFICADOR DE EXPLORACIÓN</small></div></div>
- <div class="header-right"><span class="status">SOL 001 · SECTOR JEZERO</span><span class="live">● SISTEMA EN LÍNEA</span></div>
+ <div class="header-right"><a href="index.html" class="btn-inicio">← VOLVER AL INICIO</a><span class="status">SOL 001 · SECTOR JEZERO</span><span class="live">● SISTEMA EN LÍNEA</span></div>
 </header>
 <div class="layout">
  <aside class="sidebar">
