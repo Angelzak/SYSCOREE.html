@@ -173,6 +173,66 @@ header{height:66px;border-bottom:1px solid var(--line);
         color:#edf3f8}
         .leaflet-popup-content{font:11px/1.6 Inter}
         .leaflet-popup-content b{color:#ff9b6b}
+
+/* Estilos aditivos para alerta de proximidad a cráter y rover animado */
+.crater-alert-banner{
+    position:absolute;
+    z-index:450;
+    bottom:16px;
+    right:16px;
+    background:#261214ee;
+    border:1px solid var(--red);
+    color:#ffd3cf;
+    border-radius:9px;
+    padding:9px 13px;
+    font-size:10px;
+    letter-spacing:.6px;
+    backdrop-filter:blur(8px);
+    box-shadow:0 0 18px rgba(241,111,104,.35);
+    display:none;
+    align-items:center;
+    gap:8px;
+    max-width:310px;
+    animation:pulseBorder 1.1s infinite alternate;
+}
+.crater-alert-banner.active{display:flex;}
+@keyframes pulseBorder{
+    from{border-color:#f16f68;box-shadow:0 0 10px rgba(241,111,104,.25);}
+    to{border-color:#ffb0a8;box-shadow:0 0 22px rgba(241,111,104,.65);}
+}
+.crater-meta-box{
+    background:#0c141d;
+    border:1px solid #243344;
+    border-radius:8px;
+    padding:8px 10px;
+    margin:8px 0;
+    font-size:10px;
+    line-height:1.55;
+}
+.crater-meta-row{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    padding:3px 0;
+    border-bottom:1px solid #1a2532;
+}
+.crater-meta-row:last-child{border-bottom:0;}
+.crater-meta-row span{color:var(--muted);flex-shrink:0;}
+.crater-meta-row b{color:#dce6ef;text-align:right;font-weight:600;}
+.rover-marker-wrap{
+    background:transparent;
+    border:none;
+}
+.rover-rotator{
+    width:34px;
+    height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform-origin:center center;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.85));
+}
+
 @media(max-width:1000px){body{overflow:auto}
 .layout{height:auto;
     min-height:calc(100vh - 66px);
@@ -221,6 +281,10 @@ header{height:66px;border-bottom:1px solid var(--line);
   <div id="map"></div>
   <div class="map-top"><div class="map-chip">PLANETA <b>MARTE</b> &nbsp;|&nbsp; PROYECCIÓN EQUIRECTANGULAR</div><div class="map-chip">COORDENADAS <b id="coords">18.38° N, 77.58° E</b></div></div>
   <div class="map-bottom">BASE CARTOGRÁFICA: NASA / JPL – Mars Trek · MOLA / Viking. Haz clic en el mapa para consultar coordenadas.</div>
+  <div class="crater-alert-banner" id="craterAlertBanner">
+   <span style="font-size:15px">⚠️</span>
+   <div><b style="color:#ff8f88;display:block;letter-spacing:1px">ALERTA DE PROXIMIDAD A CRÁTER</b><span id="craterAlertText">Perímetro detectado</span></div>
+  </div>
  </main>
  <aside class="sidebar right">
   <div class="section-title">03 / PLANIFICADOR DE RUTA</div>
@@ -246,6 +310,12 @@ header{height:66px;border-bottom:1px solid var(--line);
   <div class="card" id="info">
    <h3 id="infoTitle">Cráter Jezero</h3>
    <p class="sub" id="infoText">Perseverance explora esta región, que conserva evidencias geológicas de un antiguo ambiente con agua.</p>
+   <div class="crater-meta-box" id="craterMetaBox">
+    <div class="crater-meta-row"><span>Descubierto / Nombrado:</span><b id="infoDiscoverer">IAU / USGS · Equipo NASA Mars Reconnaissance Orbiter</b></div>
+    <div class="crater-meta-row"><span>Cuándo:</span><b id="infoWhen">2007 (nomenclatura oficial IAU) · Misión Mars 2020 (2021)</b></div>
+    <div class="crater-meta-row"><span>Cómo se identificó:</span><b id="infoHow">Imágenes orbitales MRO (CTX / HiRISE) y espectrometría mineralógica CRISM</b></div>
+    <div class="crater-meta-row"><span>Diámetro / Zona alerta:</span><b id="infoDiameter">45 km (alerta 95 km)</b></div>
+   </div>
    <div class="metric"><span>Coordenadas</span><b id="infoCoords">18.38° N, 77.58° E</b></div>
    <div class="metric"><span>Misión relacionada</span><b id="infoMission">Perseverance</b></div>
    <p class="source" id="infoSource">Fuente: NASA Mars 2020. <a href="https://mars.nasa.gov/mars2020/" target="_blank">Consultar misión ↗</a></p>
@@ -277,6 +347,426 @@ header{height:66px;border-bottom:1px solid var(--line);
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const map=L.map('map',{crs:L.CRS.EPSG4326,center:[18.38,77.58],zoom:2,minZoom:1,maxZoom:7,worldCopyJump:false});
+
+/* ============================================================================
+   1. CATÁLOGO OFICIAL DE CRÁTERES Y CUENCAS MARCIANAS (DATOS NASA / USGS / IAU)
+   ============================================================================ */
+const marsCraters = [
+  {
+    name: 'Cráter Jezero',
+    lat: 18.38, lon: 77.58, diameterKm: 45, alertRadiusKm: 95,
+    discoverer: 'IAU / USGS · Equipo NASA Mars Reconnaissance Orbiter',
+    when: '2007 (nomenclatura oficial IAU) · Misión Mars 2020 (2021)',
+    how: 'Imágenes orbitales MRO (CTX / HiRISE) y espectrometría mineralógica CRISM',
+    mission: 'NASA Mars 2020 (Perseverance & Ingenuity)',
+    desc: 'Antiguo cráter de impacto que albergó un paleolago y un delta fluvial bien preservado rico en esmectitas, carbonatos y sílice hidratada.',
+    source: 'NASA Mars 2020 / USGS Gazetteer',
+    url: 'https://mars.nasa.gov/mars2020/'
+  },
+  {
+    name: 'Cráter Gale',
+    lat: -5.4, lon: 137.8, diameterKm: 154, alertRadiusKm: 130,
+    discoverer: 'IAU · Cartografía orbital Mariner 9 y Viking',
+    when: '1991 (nombrado en honor a Walter F. Gale) · MSL (2012)',
+    how: 'Fotogrametría orbital Viking Orbiter, altimetría MOLA y cámara HiRISE',
+    mission: 'NASA Mars Science Laboratory (Curiosity)',
+    desc: 'Cráter de impacto con el pico central Aeolis Mons (Monte Sharp) de 5.5 km de altura, compuesto por estratos sedimentarios lacustres y eólicos.',
+    source: 'NASA MSL Curiosity / JPL',
+    url: 'https://mars.nasa.gov/msl/'
+  },
+  {
+    name: 'Hellas Planitia',
+    lat: -42.4, lon: 70.5, diameterKm: 2300, alertRadiusKm: 420,
+    discoverer: 'Giovanni Schiaparelli (observación telescópica) / Mariner 9',
+    when: '1877 (observación telescópica) · 1971 (cartografía Mariner 9)',
+    how: 'Observación telescópica de albedo y altimetría láser MOLA (Mars Global Surveyor)',
+    mission: 'NASA Mariner 9 / Mars Global Surveyor (MOLA)',
+    desc: 'La mayor estructura de impacto visible en Marte (~7.152 m de profundidad bajo el datum marciano), con alta presión atmosférica y actividad glacial.',
+    source: 'NASA JPL / MOLA Science Team',
+    url: 'https://mars.nasa.gov/gallery/atlas/hellas-planitia.html'
+  },
+  {
+    name: 'Argyre Planitia',
+    lat: -49.7, lon: -43.4, diameterKm: 1800, alertRadiusKm: 340,
+    discoverer: 'Giovanni Schiaparelli / Misión NASA Viking 1 y 2',
+    when: '1877 (telescopio) · 1976 (mosaico orbital Viking)',
+    how: 'Mosaicos de imagen Viking Orbiter MDIM y perfiles topográficos MOLA',
+    mission: 'NASA Viking Orbiters / Mars Reconnaissance Orbiter',
+    desc: 'Segunda cuenca de impacto multi-anillo más profunda de Marte, rodeada por los montes Charitum y Nereidum, con antiguos canales de desagüe.',
+    source: 'NASA Planetary Data System (PDS)',
+    url: 'https://trek.nasa.gov/mars/'
+  },
+  {
+    name: 'Isidis Planitia',
+    lat: 12.9, lon: 87.0, diameterKm: 1500, alertRadiusKm: 280,
+    discoverer: 'Giovanni Schiaparelli / NASA Mars Global Surveyor',
+    when: '1877 (telescopio) · 1997-2001 (mapeo gravimétrico MGS)',
+    how: 'Altimetría láser MOLA y rastreo Doppler de gravedad (anomalía mascon)',
+    mission: 'NASA Mars Global Surveyor / MRO',
+    desc: 'Gran cuenca de impacto situada en el límite dicotómico marciano; su borde occidental contiene al cráter Jezero y las llanuras de Nili Fossae.',
+    source: 'NASA Goddard / MGS MOLA',
+    url: 'https://trek.nasa.gov/mars/'
+  },
+  {
+    name: 'Cráter Schiaparelli',
+    lat: -2.7, lon: 16.7, diameterKm: 461, alertRadiusKm: 230,
+    discoverer: 'IAU · Sondas NASA Mariner 6, 7 y Mariner 9',
+    when: '1973 (aprobado por IAU tras sobrevuelos Mariner)',
+    how: 'Cámara de televisión orbital Mariner 9 y espectrómetro térmico TES (MGS)',
+    mission: 'NASA Mariner 9 / Mars Global Surveyor',
+    desc: 'Enorme cráter en Sinus Sabaeus con capas sedimentarias deformadas por viento e historia lacustre documentada por cámaras MOC y HiRISE.',
+    source: 'NASA JPL Photojournal / USGS',
+    url: 'https://photojournal.jpl.nasa.gov/'
+  },
+  {
+    name: 'Cráter Huygens',
+    lat: -13.9, lon: 55.6, diameterKm: 467, alertRadiusKm: 235,
+    discoverer: 'IAU · Misiones NASA Mariner 9 y Viking Orbiter',
+    when: '1973 (nomenclatura IAU tras cartografía Mariner 9)',
+    how: 'Imágenes orbitales Viking, espectrómetro CRISM y cámara THEMIS (Odyssey)',
+    mission: 'NASA 2001 Mars Odyssey / MRO',
+    desc: 'Uno de los cráteres más grandes de las tierras altas del sur; CRISM detectó carbonatos y filosilicatos expuestos en su anillo central.',
+    source: 'NASA MRO CRISM / JPL',
+    url: 'https://mars.nasa.gov/mro/'
+  },
+  {
+    name: 'Cráter Antoniadi',
+    lat: 21.5, lon: 60.8, diameterKm: 394, alertRadiusKm: 200,
+    discoverer: 'IAU · Misiones NASA Mariner 9 y Viking',
+    when: '1973 (nombrado en honor a Eugène M. Antoniadi)',
+    how: 'Fotografía orbital Viking, altimetría MOLA y cámara HiRISE (MRO)',
+    mission: 'NASA Mars Reconnaissance Orbiter (HiRISE)',
+    desc: 'Cráter en Syrtis Major que conserva redes de canales invertidos y depósitos fluviales que evidencian escorrentía superficial antigua.',
+    source: 'NASA HiRISE / University of Arizona',
+    url: 'https://www.uahirise.org/'
+  },
+  {
+    name: 'Cráter Cassini',
+    lat: 23.8, lon: 31.8, diameterKm: 412, alertRadiusKm: 205,
+    discoverer: 'IAU · Cartografía NASA Mariner 9',
+    when: '1973 (nomenclatura oficial IAU)',
+    how: 'Imágenes infrarrojas THEMIS (Mars Odyssey) y altimetría MOLA',
+    mission: 'NASA 2001 Mars Odyssey / MGS',
+    desc: 'Cráter de impacto en Arabia Terra cuya morfología suavizada sugiere antiguos procesos de relleno sedimentario y posible actividad hidrotermal.',
+    source: 'NASA Mars Odyssey THEMIS',
+    url: 'https://mars.nasa.gov/odyssey/'
+  },
+  {
+    name: 'Cráter Becquerel',
+    lat: 22.1, lon: -8.0, diameterKm: 167, alertRadiusKm: 120,
+    discoverer: 'IAU · Misiones NASA Mariner 9 y Viking',
+    when: '1973 (aprobado por IAU)',
+    how: 'Estereofotogrametría HiRISE y espectrometría CRISM (MRO)',
+    mission: 'NASA Mars Reconnaissance Orbiter',
+    desc: 'Famoso por albergar un montículo sedimentario de ~800 m de espesor con estratificación rítmica vinculada a ciclos orbitales climáticos de Marte.',
+    source: 'NASA JPL / MRO Science',
+    url: 'https://mars.nasa.gov/mro/'
+  },
+  {
+    name: 'Cráter Holden',
+    lat: -26.4, lon: -34.0, diameterKm: 153, alertRadiusKm: 115,
+    discoverer: 'IAU · Misiones NASA Mariner 9 y Viking Orbiter',
+    when: '1973 (nombrado en honor a Edward S. Holden)',
+    how: 'Imágenes orbitales MRO (HiRISE/CTX) y datos minerales CRISM',
+    mission: 'NASA Mars Reconnaissance Orbiter',
+    desc: 'Cráter conectado al sistema de valles Uzboi Vallis, con megabrechas y arcillas lacustres depositadas tras la ruptura de un dique natural.',
+    source: 'NASA Mars Exploration / JPL',
+    url: 'https://mars.nasa.gov/'
+  },
+  {
+    name: 'Cráter Eberswalde',
+    lat: -23.86, lon: -33.3, diameterKm: 65, alertRadiusKm: 85,
+    discoverer: 'Equipo Mars Global Surveyor (MOC) / IAU',
+    when: '2003 (identificación del delta por Malin & Edgett) · 2006 (IAU)',
+    how: 'Cámara Mars Orbiter Camera (MOC) de MGS y cámara HiRISE de MRO',
+    mission: 'NASA Mars Global Surveyor / MRO',
+    desc: 'Contiene uno de los deltas fluviales exhumados más claros de Marte, prueba directa de flujo de agua líquida persistente hacia un lago cerrado.',
+    source: 'NASA MGS MOC / JPL',
+    url: 'https://mars.nasa.gov/mgs/'
+  },
+  {
+    name: 'Cráter Gusev',
+    lat: -14.5, lon: 175.4, diameterKm: 166, alertRadiusKm: 120,
+    discoverer: 'IAU · Misión NASA Viking Orbiter',
+    when: '1976 (nombrado por IAU) · Explorado in situ en 2004',
+    how: 'Cartografía orbital Viking (canal Ma’adim Vallis) y rover Spirit (MER-A)',
+    mission: 'NASA Mars Exploration Rover Spirit',
+    desc: 'Cráter en el extremo de Ma’adim Vallis explorado por el rover Spirit, donde halló afloramientos de sílice opalina y carbonatos en Colinas Columbia.',
+    source: 'NASA MER Spirit / JPL',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Endeavour',
+    lat: -2.28, lon: -5.23, diameterKm: 22, alertRadiusKm: 75,
+    discoverer: 'Equipo científico NASA Mars Exploration Rover Opportunity',
+    when: '2008 (aprobado por IAU) · Explorado por Opportunity (2011-2018)',
+    how: 'Imágenes orbitales HiRISE (MRO) y espectrómetro Mössbauer/APXS en rover',
+    mission: 'NASA Mars Exploration Rover Opportunity',
+    desc: 'Cráter en Meridiani Planum en cuyo borde (Cabo York) Opportunity descubrió vetas de yeso hidratado y arcillas de ambientes acuosos neutros.',
+    source: 'NASA MER Opportunity / JPL',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Victoria',
+    lat: -2.05, lon: -5.5, diameterKm: 0.75, alertRadiusKm: 60,
+    discoverer: 'Equipo NASA Mars Exploration Rover Opportunity',
+    when: '2006 (alcanzado por Opportunity en Sol 951)',
+    how: 'Cámara panorámica Pancam (Opportunity) y cámara orbital HiRISE (MRO)',
+    mission: 'NASA Mars Exploration Rover Opportunity',
+    desc: 'Cráter de bordes festoneados en Meridiani Planum donde Opportunity estudió estratos de arenisca eólica modificados por agua subterránea.',
+    source: 'NASA JPL / HiRISE',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Endurance',
+    lat: -1.95, lon: -5.5, diameterKm: 0.13, alertRadiusKm: 55,
+    discoverer: 'Equipo NASA Mars Exploration Rover Opportunity',
+    when: '2004 (explorado por Opportunity entre Sol 95 y Sol 315)',
+    how: 'Espectrómetro Mössbauer, Mini-TES e imágenes Pancam del rover Opportunity',
+    mission: 'NASA Mars Exploration Rover Opportunity',
+    desc: 'Cráter de impacto en Meridiani Planum donde Opportunity descendió para analizar capas de sulfatos que confirmaron antiguas aguas ácidas.',
+    source: 'NASA MER Opportunity / JPL',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Eagle',
+    lat: -1.95, lon: -5.53, diameterKm: 0.022, alertRadiusKm: 50,
+    discoverer: 'Equipo NASA Mars Exploration Rover Opportunity',
+    when: '2004 (sitio de aterrizaje exacto de Opportunity el 25 de enero)',
+    how: 'Cámaras Navcam/Pancam y microscopio MI sobre afloramientos con hematita',
+    mission: 'NASA Mars Exploration Rover Opportunity',
+    desc: 'Pequeño cráter en Meridiani Planum donde aterrizó Opportunity y descubrió las famosas esférulas de hematita ("blueberries").',
+    source: 'NASA JPL / Mars Exploration Rovers',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Santa Maria',
+    lat: -2.17, lon: -5.45, diameterKm: 0.09, alertRadiusKm: 55,
+    discoverer: 'Equipo NASA Mars Exploration Rover Opportunity',
+    when: '2010 (estudiado por Opportunity en su ruta hacia Endeavour)',
+    how: 'Espectrómetro CRISM (MRO) y cámara Pancam / APXS de Opportunity',
+    mission: 'NASA Mars Exploration Rover Opportunity',
+    desc: 'Cráter joven en Meridiani Planum con depósitos de sulfatos hidratados identificados desde órbita por CRISM y verificados en superficie.',
+    source: 'NASA JPL / MRO CRISM',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Belva',
+    lat: 18.4, lon: 77.5, diameterKm: 0.9, alertRadiusKm: 65,
+    discoverer: 'Equipo NASA Mars 2020 (Perseverance) / USGS',
+    when: '2023 (explorado por Perseverance en el abanico deltaico de Jezero)',
+    how: 'Mosaicos de alta resolución Mastcam-Z y cámara orbital HiRISE',
+    mission: 'NASA Mars 2020 (Perseverance)',
+    desc: 'Cráter de impacto incrustado en la cima del delta occidental de Jezero cuyas paredes expusieron estratos fluviales inclinados.',
+    source: 'NASA Mars 2020 / JPL',
+    url: 'https://mars.nasa.gov/mars2020/'
+  },
+  {
+    name: 'Cráter Bonneville',
+    lat: -14.6, lon: 175.5, diameterKm: 0.21, alertRadiusKm: 55,
+    discoverer: 'Equipo NASA Mars Exploration Rover Spirit',
+    when: '2004 (explorado por el rover Spirit en Sol 65)',
+    how: 'Navegación autónoma Hazcam/Navcam y espectrómetro Mini-TES',
+    mission: 'NASA Mars Exploration Rover Spirit',
+    desc: 'Cráter joven en las llanuras basálticas de Gusev fotografiado desde su borde por el rover Spirit, revelando su escudo térmico en la pared opuesta.',
+    source: 'NASA MER Spirit / JPL',
+    url: 'https://mars.nasa.gov/mer/'
+  },
+  {
+    name: 'Cráter Korolev',
+    lat: 72.8, lon: 164.6, diameterKm: 82, alertRadiusKm: 110,
+    discoverer: 'IAU · Misiones NASA Mariner 9 y Viking',
+    when: '1973 (nombrado en honor a Serguéi Koroliov)',
+    how: 'Altimetría láser MOLA (MGS), cámara CTX (MRO) y radar SHARAD',
+    mission: 'NASA Mars Global Surveyor / MRO',
+    desc: 'Cráter bien conservado en las tierras bajas del norte (Olympia Undae) que alberga un domo permanente de hielo de agua de ~1.8 km de espesor.',
+    source: 'NASA MRO / USGS Planetary Nomenclature',
+    url: 'https://trek.nasa.gov/mars/'
+  },
+  {
+    name: 'Cráter Lyot',
+    lat: 50.8, lon: 29.3, diameterKm: 236, alertRadiusKm: 155,
+    discoverer: 'IAU · Cartografía NASA Mariner 9',
+    when: '1973 (nombrado en honor a Bernard Lyot)',
+    how: 'Altimetría MOLA y cámara de contexto CTX / HiRISE (MRO)',
+    mission: 'NASA Mars Reconnaissance Orbiter / MGS',
+    desc: 'El punto más profundo de las tierras bajas del hemisferio norte marciano, con evidencia de antiguos glaciares y flujos líquidos recientes en barrancos.',
+    source: 'NASA JPL / MRO HiRISE',
+    url: 'https://www.uahirise.org/'
+  },
+  {
+    name: 'Cráter Maunder',
+    lat: -50.0, lon: 1.5, diameterKm: 108, alertRadiusKm: 105,
+    discoverer: 'IAU · Cartografía NASA Mariner 9',
+    when: '1973 (nombrado en honor a Edward W. Maunder)',
+    how: 'Cámara infrarroja THEMIS (Mars Odyssey) y cámara CTX (MRO)',
+    mission: 'NASA 2001 Mars Odyssey / MRO',
+    desc: 'Cráter en Noachis Terra con barrancos activos en sus pendientes interiores estudiados por HiRISE para monitorizar cambios estacionales.',
+    source: 'NASA Mars Odyssey / HiRISE',
+    url: 'https://www.uahirise.org/'
+  },
+  {
+    name: 'Cráter Mojave',
+    lat: 7.5, lon: -33.0, diameterKm: 58, alertRadiusKm: 85,
+    discoverer: 'IAU · Misiones NASA Mars Global Surveyor y MRO',
+    when: '2006 (aprobado por IAU)',
+    how: 'Imágenes de alta resolución HiRISE (MRO) y espectrometría THEMIS',
+    mission: 'NASA Mars Reconnaissance Orbiter',
+    desc: 'Cráter de impacto muy joven (~3-5 millones de años) con terrazas y abanicos aluviales formados por fusión súbita de hielo subsuperficial.',
+    source: 'NASA JPL / MRO HiRISE',
+    url: 'https://www.uahirise.org/'
+  },
+  {
+    name: 'Cráter Zunil',
+    lat: 7.7, lon: 166.0, diameterKm: 10.2, alertRadiusKm: 70,
+    discoverer: 'Equipo NASA 2001 Mars Odyssey (THEMIS) / IAU',
+    when: '2003 (identificado como cráter con rayos térmicos en THEMIS)',
+    how: 'Imágenes infrarrojas nocturnas THEMIS y cámara HiRISE (MRO)',
+    mission: 'NASA 2001 Mars Odyssey / MRO',
+    desc: 'Cráter de impacto reciente en Cerberus Plains con un espectacular sistema radial de millones de cráteres secundarios visible en infrarrojo.',
+    source: 'NASA Mars Odyssey THEMIS / JPL',
+    url: 'https://mars.nasa.gov/odyssey/'
+  },
+  {
+    name: 'Cráter Kaiser',
+    lat: -46.6, lon: 19.1, diameterKm: 207, alertRadiusKm: 140,
+    discoverer: 'IAU · Sondas NASA Mariner 9 y Viking',
+    when: '1973 (nombrado en honor a Frederik Kaiser)',
+    how: 'Imágenes de alta resolución MOC (MGS) y HiRISE (MRO)',
+    mission: 'NASA Mars Global Surveyor / MRO',
+    desc: 'Famoso por su extenso campo de dunas oscuras de arena basáltica (barchan) y barrancos estacionales provocados por sublimación de hielo de CO2.',
+    source: 'NASA JPL / HiRISE',
+    url: 'https://www.uahirise.org/'
+  },
+  {
+    name: 'Cráter Herschel',
+    lat: -14.9, lon: 129.9, diameterKm: 304, alertRadiusKm: 175,
+    discoverer: 'IAU · Misiones NASA Mariner 9 y Viking',
+    when: '1973 (nombrado en honor a William y John Herschel)',
+    how: 'Imágenes orbitales MOC (MGS) y cámara HiRISE (MRO)',
+    mission: 'NASA Mars Global Surveyor / MRO',
+    desc: 'Cráter en Mare Tyrrhenum conocido por sus grandes campos de dunas activas monitorizadas durante años para medir el transporte eólico marciano.',
+    source: 'NASA JPL / MRO',
+    url: 'https://mars.nasa.gov/mro/'
+  },
+  {
+    name: 'Cráter Proctor',
+    lat: -47.6, lon: 29.7, diameterKm: 168, alertRadiusKm: 125,
+    discoverer: 'IAU · Cartografía NASA Mariner 9',
+    when: '1973 (nombrado en honor a Richard A. Proctor)',
+    how: 'Cámara Mars Orbiter Camera (MGS) y HiRISE (MRO)',
+    mission: 'NASA Mars Global Surveyor / MRO',
+    desc: 'Cráter en Noachis Terra que contiene un emblemático campo de dunas oscuras rodeado por ondas de arena más claras estudiadas desde 1999.',
+    source: 'NASA MGS MOC / JPL',
+    url: 'https://photojournal.jpl.nasa.gov/'
+  }
+];
+
+/* ============================================================================
+   2. SINTETIZADOR DE ALARMA SONORA DE PROXIMIDAD (WEB AUDIO API)
+   ============================================================================ */
+let audioCtx = null;
+const craterAlertCooldown = {};
+let alertBannerTimeout = null;
+
+function unlockAudio() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+['click', 'keydown', 'touchstart'].forEach(evt => {
+  document.addEventListener(evt, unlockAudio, { passive: true });
+});
+
+function playProximityAlarm(craterName) {
+  const now = Date.now();
+  if (craterAlertCooldown[craterName] && (now - craterAlertCooldown[craterName]) < 6500) {
+    return;
+  }
+  craterAlertCooldown[craterName] = now;
+
+  const banner = document.getElementById('craterAlertBanner');
+  const bannerText = document.getElementById('craterAlertText');
+  if (banner && bannerText) {
+    bannerText.textContent = `${craterName} detectado en rango de proximidad`;
+    banner.classList.add('active');
+    clearTimeout(alertBannerTimeout);
+    alertBannerTimeout = setTimeout(() => {
+      banner.classList.remove('active');
+    }, 4500);
+  }
+
+  try {
+    unlockAudio();
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const beeps = [
+      { start: 0.00, dur: 0.11, f1: 880, f2: 1180 },
+      { start: 0.16, dur: 0.11, f1: 880, f2: 1180 },
+      { start: 0.34, dur: 0.18, f1: 1040, f2: 660 }
+    ];
+    beeps.forEach(b => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(b.f1, t0 + b.start);
+      osc.frequency.exponentialRampToValueAtTime(b.f2, t0 + b.start + b.dur);
+
+      gain.gain.setValueAtTime(0.0001, t0 + b.start);
+      gain.gain.exponentialRampToValueAtTime(0.14, t0 + b.start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + b.start + b.dur);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0 + b.start);
+      osc.stop(t0 + b.start + b.dur + 0.02);
+    });
+  } catch (err) {}
+}
+
+function selectCrater(c, triggerAlarm = true) {
+  document.getElementById('infoTitle').textContent = c.name;
+  document.getElementById('infoText').textContent = c.desc;
+  document.getElementById('infoCoords').textContent = `${Math.abs(c.lat).toFixed(2)}° ${c.lat>=0?'N':'S'}, ${Math.abs(c.lon).toFixed(2)}° ${c.lon>=0?'E':'W'}`;
+  document.getElementById('infoMission').textContent = c.mission;
+
+  document.getElementById('craterMetaBox').style.display = 'block';
+  document.getElementById('infoDiscoverer').textContent = c.discoverer;
+  document.getElementById('infoWhen').textContent = c.when;
+  document.getElementById('infoHow').textContent = c.how;
+  document.getElementById('infoDiameter').textContent = `${c.diameterKm} km (alerta ${c.alertRadiusKm} km)`;
+
+  document.getElementById('infoSource').innerHTML = `Fuente: ${c.source}. <a href="${c.url}" target="_blank">Consultar NASA ↗</a>`;
+  updateWeather(c);
+
+  if (triggerAlarm) {
+    playProximityAlarm(c.name);
+  }
+}
+
+function findNearestCrater(lat, lon) {
+  let nearest = null;
+  let minDist = Infinity;
+  for (let i = 0; i < marsCraters.length; i++) {
+    const c = marsCraters[i];
+    const d = haversine([lat, lon], [c.lat, c.lon]);
+    if (d <= c.alertRadiusKm && d < minDist) {
+      minDist = d;
+      nearest = c;
+    }
+  }
+  return nearest;
+}
+
+/* ============================================================================
+   SECCIÓN 07: CLASIFICACIÓN DE TERRENOS (CONECTADA CON DATOS NASA DE CRÁTERES)
+   ============================================================================ */
 (function(){
   const listEl=document.getElementById('s07List');
   const noteEl=document.getElementById('s07Note');
@@ -373,9 +863,25 @@ const map=L.map('map',{crs:L.CRS.EPSG4326,center:[18.38,77.58],zoom:2,minZoom:1,
   types.forEach(t=>{
     const g=L.layerGroup();
     t.shapes.forEach(s=>{
-      L.polygon(s.pts,{color:t.color,weight:1.5,fillColor:t.color,fillOpacity:.5})
+      const poly = L.polygon(s.pts,{color:t.color,weight:1.5,fillColor:t.color,fillOpacity:.5})
         .bindTooltip(s.name+' · '+t.name,{sticky:true})
         .addTo(g);
+
+      // Si el polígono corresponde a un cráter o cuenca del catálogo NASA, mostrar su ficha NASA y activar alarma al tocarlo
+      const craterMatch = marsCraters.find(c =>
+        s.name.toLowerCase().includes(c.name.toLowerCase()) ||
+        c.name.toLowerCase().includes(s.name.toLowerCase())
+      );
+      if (craterMatch) {
+        poly.on('click', (ev) => {
+          L.DomEvent.stopPropagation(ev);
+          selectCrater(craterMatch, true);
+          L.popup()
+            .setLatLng([craterMatch.lat, craterMatch.lon])
+            .setContent(`<b>◉ ${craterMatch.name}</b><br>${craterMatch.desc}<br><small><b>Descubierto:</b> ${craterMatch.discoverer} (${craterMatch.when})<br><b>Cómo:</b> ${craterMatch.how}</small>`)
+            .openOn(map);
+        });
+      }
     });
     groups[t.id]=g;
     const row=document.createElement('div');
@@ -410,6 +916,7 @@ const map=L.map('map',{crs:L.CRS.EPSG4326,center:[18.38,77.58],zoom:2,minZoom:1,
   if(btnAll) btnAll.addEventListener('click',()=>setAll(true));
   if(btnNone) btnNone.addEventListener('click',()=>setAll(false));
 })();
+
 const nasaTiles='https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/{z}/{y}/{x}.jpg';
 const base=L.tileLayer(nasaTiles,{minZoom:0,maxZoom:7,tileSize:256,noWrap:true,attribution:'NASA / JPL · Mars Trek · Viking MDIM'}).addTo(map);
 base.on('tileerror',()=>{document.querySelector('.map-bottom').textContent='No se pudo cargar una tesela NASA. Comprueba tu conexión; consulta NASA Mars Trek desde el enlace de fuentes.'});
@@ -429,6 +936,27 @@ places.forEach(p=>{
  m.bindPopup(`<b>${p.name}</b><br>${p.desc}<br><small>Fuente: ${p.source}</small>`);
  m.on('click',()=>showInfo(p));
 });
+
+/* Marcadores interactivos de cráteres del catálogo NASA */
+const craterLayer = L.layerGroup().addTo(map);
+marsCraters.forEach(c => {
+  const isAlreadyMission = (c.name === 'Cráter Jezero' || c.name === 'Cráter Gale');
+  if (!isAlreadyMission) {
+    const cm = L.circleMarker([c.lat, c.lon], {
+      radius: 5,
+      color: '#65c7d9',
+      weight: 1.5,
+      fillColor: '#163242',
+      fillOpacity: 0.85
+    }).addTo(craterLayer);
+    cm.bindPopup(`<b>◉ ${c.name}</b><br><small>Diámetro: ${c.diameterKm} km · ${c.mission}</small><br>${c.desc}<br><small><b>Descubrimiento:</b> ${c.discoverer} (${c.when})<br><b>Cómo:</b> ${c.how}</small>`);
+    cm.on('click', (ev) => {
+      L.DomEvent.stopPropagation(ev);
+      selectCrater(c, true);
+    });
+  }
+});
+
     function updateWeather(p){
   document.getElementById('weatherPlace').textContent = p.name;
   const now = new Date();
@@ -457,24 +985,266 @@ places.forEach(p=>{
   document.getElementById('weatherSol').textContent = 'Sol ' + sol + ' - Ls ' + Math.round(Ls) + '°';
   document.getElementById('weatherNote').textContent = 'Modelo calculado con la fecha actual de Marte de hoy ' + now.toLocaleDateString('es-MX') + '. Basado en datos reales de InSight + MEDA Perseverance.';
 }
-function showInfo(p){document.getElementById('infoTitle').textContent=p.name;document.getElementById('infoText').textContent=p.desc;document.getElementById('infoCoords').textContent=`${Math.abs(p.lat).toFixed(2)}° ${p.lat>=0?'N':'S'}, ${Math.abs(p.lon).toFixed(2)}° ${p.lon>=0?'E':'W'}`;document.getElementById('infoMission').textContent=p.mission;document.getElementById('infoSource').innerHTML=`Fuente: ${p.source}. <a href="https://trek.nasa.gov/mars/" target="_blank">Consultar NASA Trek ↗</a>`;updateWeather(p);}
-document.querySelectorAll('.place').forEach(el=>el.addEventListener('click',()=>{const p=places.find(x=>x.name.toLowerCase().includes(el.dataset.name.toLowerCase()));map.setView([+el.dataset.lat,+el.dataset.lon],4);if(p)showInfo(p)}));
+
+function showInfo(p){
+  const matchedCrater = marsCraters.find(c =>
+    c.name.toLowerCase() === p.name.toLowerCase() ||
+    haversine([p.lat, p.lon], [c.lat, c.lon]) <= c.alertRadiusKm
+  );
+  if (matchedCrater && (p.name === 'Punto seleccionado' || p.name.toLowerCase().includes('cráter') || p.name.toLowerCase().includes('hellas') || p.name.toLowerCase().includes('argyre') || p.name.toLowerCase().includes('isidis'))) {
+    selectCrater(matchedCrater, true);
+    return;
+  }
+
+  document.getElementById('infoTitle').textContent=p.name;
+  document.getElementById('infoText').textContent=p.desc;
+  document.getElementById('infoCoords').textContent=`${Math.abs(p.lat).toFixed(2)}° ${p.lat>=0?'N':'S'}, ${Math.abs(p.lon).toFixed(2)}° ${p.lon>=0?'E':'W'}`;
+  document.getElementById('infoMission').textContent=p.mission;
+  document.getElementById('craterMetaBox').style.display = 'none';
+  document.getElementById('infoSource').innerHTML=`Fuente: ${p.source}. <a href="https://trek.nasa.gov/mars/" target="_blank">Consultar NASA Trek ↗</a>`;
+  updateWeather(p);
+}
+
+document.querySelectorAll('.place').forEach(el=>el.addEventListener('click',()=>{
+  const p=places.find(x=>x.name.toLowerCase().includes(el.dataset.name.toLowerCase()));
+  map.setView([+el.dataset.lat,+el.dataset.lon],4);
+  if(p)showInfo(p);
+}));
 document.getElementById('relief').addEventListener('change',e=>{e.target.checked?relief.addTo(map):map.removeLayer(relief)});
-document.getElementById('missions').addEventListener('change',e=>{e.target.checked?missionLayer.addTo(map):map.removeLayer(missionLayer)});
+document.getElementById('missions').addEventListener('change',e=>{
+  if(e.target.checked){missionLayer.addTo(map);craterLayer.addTo(map);}
+  else{map.removeLayer(missionLayer);map.removeLayer(craterLayer);}
+});
 ['terrain','temp','ice'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{if(e.target.checked)alert('Esta capa es una referencia de interfaz. Para mostrar datos científicos medidos, integraremos el producto correspondiente del catálogo NASA Mars Trek y sus metadatos.')}));
-map.on('mousemove',e=>{document.getElementById('coords').textContent=`${Math.abs(e.latlng.lat).toFixed(2)}° ${e.latlng.lat>=0?'N':'S'}, ${Math.abs(e.latlng.lng).toFixed(2)}° ${e.latlng.lng>=0?'E':'W'}`});
-map.on('click',e=>{const p={name:'Punto seleccionado',lat:e.latlng.lat,lon:e.latlng.lng,mission:'Sin misión asignada',desc:'Ubicación seleccionada manualmente. Consulta los productos de NASA para conocer las características científicas de esta zona.',source:'Coordenadas del mapa'};showInfo(p)});
+
+let activeHoverCrater = null;
+map.on('mousemove',e=>{
+  document.getElementById('coords').textContent=`${Math.abs(e.latlng.lat).toFixed(2)}° ${e.latlng.lat>=0?'N':'S'}, ${Math.abs(e.latlng.lng).toFixed(2)}° ${e.latlng.lng>=0?'E':'W'}`;
+  if (map.getZoom() >= 3) {
+    const near = findNearestCrater(e.latlng.lat, e.latlng.lng);
+    if (near && activeHoverCrater !== near.name) {
+      activeHoverCrater = near.name;
+      selectCrater(near, true);
+    } else if (!near) {
+      activeHoverCrater = null;
+    }
+  }
+});
+
+/* Detección al acercarse mediante zoom o desplazamiento del mapa */
+map.on('zoomend moveend', () => {
+  if (map.getZoom() >= 4) {
+    const center = map.getCenter();
+    const near = findNearestCrater(center.lat, center.lng);
+    if (near) {
+      selectCrater(near, true);
+    }
+  }
+});
+
+map.on('click',e=>{
+  const nearCrater = findNearestCrater(e.latlng.lat, e.latlng.lng);
+  if (nearCrater) {
+    selectCrater(nearCrater, true);
+    L.popup()
+      .setLatLng([nearCrater.lat, nearCrater.lon])
+      .setContent(`<b>◉ ${nearCrater.name}</b><br>${nearCrater.desc}<br><small><b>Descubierto:</b> ${nearCrater.discoverer} (${nearCrater.when})<br><b>Cómo:</b> ${nearCrater.how}<br><b>Fuente:</b> ${nearCrater.source}</small>`)
+      .openOn(map);
+    return;
+  }
+  const p={name:'Punto seleccionado',lat:e.latlng.lat,lon:e.latlng.lng,mission:'Sin misión asignada',desc:'Ubicación seleccionada manualmente. Consulta los productos de NASA para conocer las características científicas de esta zona.',source:'Coordenadas del mapa'};
+  showInfo(p);
+});
+
 function haversine(a,b){const R=3389.5,toRad=x=>x*Math.PI/180,dLat=toRad(b[0]-a[0]),dLon=toRad(b[1]-a[1]);const h=Math.sin(dLat/2)**2+Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
-document.getElementById('routeBtn').addEventListener('click',()=>{const a=document.getElementById('origin').value.split(',').map(Number),b=document.getElementById('destination').value.split(',').map(Number);if(routeLine)map.removeLayer(routeLine);markers.forEach(m=>map.removeLayer(m));markers=[];routeLine=L.polyline([a,b],{color:'#ff8a59',weight:4,dashArray:'9 8'}).addTo(map);markers=[L.circleMarker(a,{radius:7,color:'#fff',fillColor:'#55c98b',fillOpacity:1}).addTo(map),L.circleMarker(b,{radius:7,color:'#fff',fillColor:'#ef7047',fillOpacity:1}).addTo(map)];map.fitBounds(routeLine.getBounds().pad(.25));const d=haversine(a,b);document.getElementById('distance').textContent=d.toFixed(1)+' km';
-const energyPerKm = 3.3; 
-const fuelPerKm = 0.08; 
-const totalEnergy = d * energyPerKm;
-const totalFuel = d * fuelPerKm;
-document.getElementById('energyCost').textContent = totalEnergy.toFixed(2)+' kWh';
-document.getElementById('fuelCost').textContent = totalFuel.toFixed(3)+' g (Pu-238)';document.getElementById('slope').textContent='Requiere DEM';document.getElementById('risk').textContent='No verificado';document.getElementById('riskText').textContent='Distancia geodésica aproximada en línea recta sobre una esfera de radio 3,389.5 km. No es una ruta transitable. La pendiente, obstáculos y seguridad no se pueden determinar sin un DEM y análisis local.'});
-document.getElementById('clearBtn').addEventListener('click',()=>{if(routeLine)map.removeLayer(routeLine);routeLine=null;markers.forEach(m=>map.removeLayer(m));markers=[];document.getElementById('distance').textContent='—';document.getElementById('energyCost').textContent='—';document.getElementById('fuelCost').textContent='—';document.getElementById('slope').textContent='Sin DEM';document.getElementById('risk').textContent='Pendiente';document.getElementById('riskText').textContent='Calcula una ruta para obtener una estimación geométrica. La pendiente real requiere consultar un modelo digital de elevación (DEM) en los puntos del trayecto.'});
+
+/* ============================================================================
+   3. CARRITO / ROVER MARCIANO ANIMADO ORIENTADO SEGÚN LA RUTA TRAZADA
+   ============================================================================ */
+let roverMarker = null;
+let roverAnimId = null;
+
+function createRoverIcon() {
+  const svg = `
+    <div class="rover-rotator" id="roverRotator">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="9" height="13" rx="2.5" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+        <rect x="45" y="10" width="9" height="13" rx="2.5" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+        <rect x="9" y="26" width="9" height="12" rx="2.5" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+        <rect x="46" y="26" width="9" height="12" rx="2.5" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+        <rect x="10" y="41" width="9" height="13" rx="2.5" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+        <rect x="45" y="41" width="9" height="13" rx="2.5" fill="#1e293b" stroke="#94a3b8" stroke-width="2"/>
+        <line x1="18" y1="16" x2="23" y2="22" stroke="#cbd5e1" stroke-width="2.5"/>
+        <line x1="46" y1="16" x2="41" y2="22" stroke="#cbd5e1" stroke-width="2.5"/>
+        <line x1="18" y1="32" x2="22" y2="32" stroke="#cbd5e1" stroke-width="2.5"/>
+        <line x1="46" y1="32" x2="42" y2="32" stroke="#cbd5e1" stroke-width="2.5"/>
+        <line x1="18" y1="47" x2="23" y2="42" stroke="#cbd5e1" stroke-width="2.5"/>
+        <line x1="46" y1="47" x2="41" y2="42" stroke="#cbd5e1" stroke-width="2.5"/>
+        <rect x="21" y="14" width="22" height="36" rx="5" fill="#f8fafc" stroke="#f07848" stroke-width="2.5"/>
+        <rect x="24" y="24" width="16" height="15" rx="2" fill="#0f172a" stroke="#65c7d9" stroke-width="1.5"/>
+        <line x1="32" y1="24" x2="32" y2="39" stroke="#65c7d9" stroke-width="1"/>
+        <line x1="24" y1="31.5" x2="40" y2="31.5" stroke="#65c7d9" stroke-width="1"/>
+        <polygon points="26,50 38,50 35,57 29,57" fill="#f07848"/>
+        <rect x="27" y="9" width="10" height="6" rx="2" fill="#38bdf8" stroke="#0f172a" stroke-width="1.5"/>
+        <circle cx="32" cy="12" r="2" fill="#ffffff"/>
+        <polygon points="28,9 36,9 40,2 24,2" fill="rgba(101,199,217,0.45)"/>
+      </svg>
+    </div>`;
+  return L.divIcon({
+    html: svg,
+    className: 'rover-marker-wrap',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+  });
+}
+
+function computeHeadingDegrees(fromLatLon, toLatLon) {
+  const p1 = map.latLngToLayerPoint(L.latLng(fromLatLon[0], fromLatLon[1]));
+  const p2 = map.latLngToLayerPoint(L.latLng(toLatLon[0], toLatLon[1]));
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const rad = Math.atan2(dx, -dy);
+  return (rad * 180) / Math.PI;
+}
+
+function stopRoverAnimation(removeMarker = false) {
+  if (roverAnimId) {
+    cancelAnimationFrame(roverAnimId);
+    roverAnimId = null;
+  }
+  if (removeMarker && roverMarker) {
+    map.removeLayer(roverMarker);
+    roverMarker = null;
+  }
+}
+
+function startRoverTraversal(startLatLon, endLatLon) {
+  stopRoverAnimation(true);
+
+  const totalSteps = 240;
+  const pathPoints = [];
+  for (let i = 0; i <= totalSteps; i++) {
+    const t = i / totalSteps;
+    const lat = startLatLon[0] + (endLatLon[0] - startLatLon[0]) * t;
+    const lon = startLatLon[1] + (endLatLon[1] - startLatLon[1]) * t;
+    pathPoints.push([lat, lon]);
+  }
+
+  roverMarker = L.marker(pathPoints[0], {
+    icon: createRoverIcon(),
+    zIndexOffset: 1000
+  }).addTo(map);
+  roverMarker.bindPopup('<b>Rover Explorador SYSCOREE</b><br>En tránsito hacia objetivo de misión.');
+
+  let currentIdx = 0;
+  let lastTriggerCrater = null;
+  let lastFrameTime = performance.now();
+  const stepIntervalMs = 45;
+
+  function updateRoverOrientation(pos, nextPos) {
+    const el = roverMarker && roverMarker.getElement();
+    if (!el) return;
+    const rotator = el.querySelector('.rover-rotator');
+    if (rotator) {
+      const angle = computeHeadingDegrees(pos, nextPos);
+      rotator.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+    }
+  }
+
+  setTimeout(() => {
+    if (pathPoints.length > 1) {
+      updateRoverOrientation(pathPoints[0], pathPoints[1]);
+    }
+  }, 30);
+
+  function step(now) {
+    if (!roverMarker) return;
+    if (now - lastFrameTime >= stepIntervalMs) {
+      lastFrameTime = now;
+      currentIdx++;
+      if (currentIdx >= pathPoints.length) {
+        currentIdx = pathPoints.length - 1;
+        roverMarker.setLatLng(pathPoints[currentIdx]);
+        roverAnimId = null;
+        return;
+      }
+
+      const pos = pathPoints[currentIdx];
+      const nextPos = pathPoints[Math.min(currentIdx + 1, pathPoints.length - 1)];
+      roverMarker.setLatLng(pos);
+      updateRoverOrientation(pos, nextPos);
+
+      const nearCrater = findNearestCrater(pos[0], pos[1]);
+      if (nearCrater && lastTriggerCrater !== nearCrater.name) {
+        lastTriggerCrater = nearCrater.name;
+        selectCrater(nearCrater, true);
+      } else if (!nearCrater) {
+        lastTriggerCrater = null;
+      }
+    }
+    roverAnimId = requestAnimationFrame(step);
+  }
+
+  roverAnimId = requestAnimationFrame(step);
+}
+
+document.getElementById('routeBtn').addEventListener('click',()=>{
+  const a=document.getElementById('origin').value.split(',').map(Number),b=document.getElementById('destination').value.split(',').map(Number);
+  if(routeLine)map.removeLayer(routeLine);
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  routeLine=L.polyline([a,b],{color:'#ff8a59',weight:4,dashArray:'9 8'}).addTo(map);
+  markers=[L.circleMarker(a,{radius:7,color:'#fff',fillColor:'#55c98b',fillOpacity:1}).addTo(map),L.circleMarker(b,{radius:7,color:'#fff',fillColor:'#ef7047',fillOpacity:1}).addTo(map)];
+  map.fitBounds(routeLine.getBounds().pad(.25));
+  const d=haversine(a,b);
+  document.getElementById('distance').textContent=d.toFixed(1)+' km';
+  const energyPerKm = 3.3; 
+  const fuelPerKm = 0.08; 
+  const totalEnergy = d * energyPerKm;
+  const totalFuel = d * fuelPerKm;
+  document.getElementById('energyCost').textContent = totalEnergy.toFixed(2)+' kWh';
+  document.getElementById('fuelCost').textContent = totalFuel.toFixed(3)+' g (Pu-238)';
+  document.getElementById('slope').textContent='Requiere DEM';
+  document.getElementById('risk').textContent='No verificado';
+  document.getElementById('riskText').textContent='Distancia geodésica aproximada en línea recta sobre una esfera de radio 3,389.5 km. No es una ruta transitable. La pendiente, obstáculos y seguridad no se pueden determinar sin un DEM y análisis local.';
+
+  startRoverTraversal(a, b);
+});
+
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  if(routeLine)map.removeLayer(routeLine);
+  routeLine=null;
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  stopRoverAnimation(true);
+  document.getElementById('distance').textContent='—';
+  document.getElementById('energyCost').textContent='—';
+  document.getElementById('fuelCost').textContent='—';
+  document.getElementById('slope').textContent='Sin DEM';
+  document.getElementById('risk').textContent='Pendiente';
+  document.getElementById('riskText').textContent='Calcula una ruta para obtener una estimación geométrica. La pendiente real requiere consultar un modelo digital de elevación (DEM) en los puntos del trayecto.';
+});
+
 updateWeather({name:'Cráter Jezero', lat:18.38, lon:77.58});
-document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter'){const q=e.target.value.toLowerCase();const p=places.find(x=>x.name.toLowerCase().includes(q));if(p){map.setView([p.lat,p.lon],4);showInfo(p)}else alert('Lugar no encontrado. Prueba Jezero, Gale, Olympus Mons, Valles Marineris o Elysium Planitia.')}});
+
+document.getElementById('search').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const q=e.target.value.toLowerCase().trim();
+    const p=places.find(x=>x.name.toLowerCase().includes(q));
+    if(p){
+      map.setView([p.lat,p.lon],4);
+      showInfo(p);
+      return;
+    }
+    const c=marsCraters.find(x=>x.name.toLowerCase().includes(q));
+    if(c){
+      map.setView([c.lat,c.lon],4);
+      selectCrater(c,true);
+      return;
+    }
+    alert('Lugar no encontrado. Prueba Jezero, Gale, Olympus Mons, Valles Marineris, Elysium Planitia o cráteres como Hellas, Korolev, Gusev, Schiaparelli.');
+  }
+});
 </script>
 </body>
 </html>
