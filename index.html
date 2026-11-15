@@ -1,12 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=principal.html">
-<title>Cargando...</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+<title>SYSCOREE | Exploración de Marte</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+body{
+    min-height:100vh;
+    background:#080c12;
+    color:#edf3f8;
+    font-family:Inter,Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    padding:30px;
+}
+.contenedor{
+    width:100%;
+    max-width:850px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+  .imagen-marte{
+    width:270px;
+    height:270px;
+    object-fit:cover;
+    margin-bottom:30px;
+}
+h1{
+    font-family:Orbitron,sans-serif;
+    font-size:55px;
+    font-weight:800;
+    letter-spacing:7px;
+    color:#f07848;
+    margin-bottom:15px;
+    text-shadow:0 0 20px #f0784860;
+}
+.subtitulo{
+    font-size:17px;
+    color:#aab7c5;
+    letter-spacing:3px;
+    margin-bottom:20px;
+}
+.boton{
+    display:inline-block;
+    text-decoration:none;
+    background:linear-gradient(100deg,#f18a58,#d85b3c);
+    color:white;
+    padding:15px 35px;
+    border-radius:9px;
+    font-size:13px;
+    font-weight:800;
+    letter-spacing:1.5px;
+    transition:.3s;
+    box-shadow:0 0 20px #f0784840;
+}
+.boton:hover{
+    transform:scale(1.06);
+    box-shadow:0 0 30px #f0784880;
+}
+</style>
 </head>
 <body>
-<p>Cargando MARS SURVIVAL MAP...</p>
-<a href="principal.html">Si no carga, dale clic aquí</a>
+
+<div class="contenedor">
+    <img
+        src="https://content.nationalgeographic.com.es/medio/2024/05/21/marte_16e85924_240521163644_800x800.jpg"
+        alt="Planeta Marte"
+        class="imagen-marte">
+    <h1>SYSCOREE</h1>
+    <p class="subtitulo">
+        EXPLORACIÓN DE MARTE
+    </p>
+
+    <a href="principal.html" class="boton">
+        Comenzar 
+    </a>
+
+</div>
 </body>
 </html>
+
