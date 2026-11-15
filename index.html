@@ -1,12 +1,276 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=principal.html">
-<title>Cargando...</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSCOREE | Exploración de Marte</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #0b0e14;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+
+        /* Franja horizontal panorámica */
+        .banner-marte {
+            width: 100%;
+            height: 360px;
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+
+        .banner-marte img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .contenedor {
+            width: 100%;
+            max-width: 850px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 55px;
+            font-weight: 800;
+            letter-spacing: 7px;
+            color: #f07848;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px #f0784860;
+        }
+
+        .subtitulo {
+            font-size: 17px;
+            color: #aab7c5;
+            letter-spacing: 3px;
+            margin-bottom: 25px;
+        }
+
+        .boton {
+            display: inline-block;
+            text-decoration: none;
+            background: linear-gradient(100deg, #f18a58, #d85b3c);
+            color: white;
+            padding: 15px 35px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            transition: 0.3s;
+            box-shadow: 0 0 20px #f0784840;
+        }
+
+        .boton:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 30px #f0784880;
+        }
+
+        .seccion-robots {
+            width: 100%;
+            max-width: 1150px;
+            padding: 0 20px;
+        }
+
+        .titulo-seccion {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            letter-spacing: 3px;
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .titulo-seccion span {
+            color: #f07848;
+        }
+
+        .galeria-robots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+        }
+
+        .tarjeta-robot {
+            position: relative;
+            height: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #f0784840;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
+        }
+
+        .tarjeta-robot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+
+
+        .etiqueta-nombre {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            background: linear-gradient(to top, rgba(11, 14, 20, 0.95), transparent);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #f07848;
+            transition: opacity 0.3s ease;
+        }
+
+        .ventana-info {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 14, 20, 0.92);
+            backdrop-filter: blur(4px);
+            border: 1px solid #f07848;
+            border-radius: 12px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: left;
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.35s ease;
+        }
+
+        .ventana-info h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            color: #f07848;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }
+
+        .ventana-info .anio {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            background-color: #d85b3c40;
+            border: 1px solid #f0784860;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            width: fit-content;
+        }
+
+        .ventana-info p {
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: #d0dae5;
+        }
+
+        
+        .tarjeta-robot:hover img {
+            transform: scale(1.08);
+        }
+
+        .tarjeta-robot:hover .etiqueta-nombre {
+            opacity: 0;
+        }
+
+        .tarjeta-robot:hover .ventana-info {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
 </head>
 <body>
-<p>Cargando MARS SURVIVAL MAP...</p>
-<a href="principal.html">Si no carga, dale clic aquí</a>
+
+    <div class="banner-marte">
+        <img 
+            src="https://concepto.de/wp-content/uploads/2020/03/marte-planeta-sistema-solar-e1585086961254.jpg" 
+            alt="Planeta Marte">
+    </div>
+
+    <div class="contenedor">
+        <h1>SYSCOREE</h1>
+        <p class="subtitulo">EXPLORACIÓN DE MARTE</p>
+        <a href="principal.html" class="boton">Comenzar</a>
+    </div>
+
+    
+    <section class="seccion-robots">
+        <h2 class="titulo-seccion">EXPLORADORES <span>ROVER</span></h2>
+
+        <div class="galeria-robots">
+     
+            <div class="tarjeta-robot">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Sojourner_on_Mars_PIA01122.jpg" alt="Rover Sojourner">
+                <div class="etiqueta-nombre">SOJOURNER</div>
+                <div class="ventana-info">
+                    <h3>SOJOURNER</h3>
+                    <span class="anio">Aterrizaje: 1997</span>
+                    <p>Primer vehículo robótico en operar sobre Marte como parte de la misión Mars Pathfinder. Analizó rocas y suelo marciano durante 83 días marcianos.</p>
+                    <p>Su peso es de 23 libras y su velocidad maxima es de 0.02 mph.</p>
+                </div>
+            </div>
+
+            <div class="tarjeta-robot">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/d/d8/NASA_Mars_Rover.jpg" alt="Rover Opportunity">
+                <div class="etiqueta-nombre">OPPORTUNITY</div>
+                <div class="ventana-info">
+                    <h3>OPPORTUNITY</h3>
+                    <span class="anio">Aterrizaje: 2004</span>
+                    <p>Diseñado para una misión de 90 días, operó casi 15 años y recorrió más de 45 km, hallando evidencia clave de agua líquida en el pasado de Marte.</p>
+                    <p>Su peso es de 374 libras y su velocidad maxima es de 0.1 mph.</p>
+                </div>
+            </div>
+
+            <div class="tarjeta-robot">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/f/f3/Curiosity_Self-Portrait_at_%27Big_Sky%27_Drilling_Site.jpg" alt="Rover Curiosity">
+                <div class="etiqueta-nombre">CURIOSITY</div>
+                <div class="ventana-info">
+                    <h3>CURIOSITY</h3>
+                    <span class="anio">Aterrizaje: 2012</span>
+                    <p>Laboratorio móvil del tamaño de un auto que explora el cráter Gale. Confirmó que Marte tuvo condiciones ambientales aptas para la vida microbiana.</p>
+                    <p>Su peso es de 1,982 libras y su velocidad maxima es de 0.09 mph.</p>
+                </div>
+            </div>
+
+            <div class="tarjeta-robot">
+                <img src="https://images-assets.nasa.gov/image/PIA24542/PIA24542~medium.jpg" alt="Rover Perseverance">
+                <div class="etiqueta-nombre">PERSEVERANCE</div>
+                <div class="ventana-info">
+                    <h3>PERSEVERANCE</h3>
+                    <span class="anio">Aterrizaje: 2021</span>
+                    <p>Explora el cráter Jezero buscando signos de vida antigua, recolectando muestras de roca para futuras misiones y probando tecnologías de oxígeno.</p>
+                    <p>Su peso es de 2,260 libras y su velocidad maxima es de 0.09 mph.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
 </body>
 </html>
